@@ -1,0 +1,80 @@
+import requests
+import sqlite3
+import time
+
+DB_NAME = "meals.db"
+
+def obtener_datos_api(categoria="Seafood"):
+    url = f"https://www.themealdb.com/api/json/v1/1/filter.php?c={categoria}"
+    response = requests.get(url)
+    return response.json()["meals"]
+
+def crear_tabla():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS meals (
+            idMeal TEXT PRIMARY KEY,
+            strMeal TEXT,
+            strMealThumb TEXT
+        )
+    """)
+    conn.commit()
+    conn.close()
+
+def guardar_en_db(meals):
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    for meal in meals:
+        cur.execute("INSERT OR REPLACE INTO meals VALUES (?, ?, ?)", 
+                    (meal["idMeal"], meal["strMeal"], meal["strMealThumb"]))
+    conn.commit()
+    conn.close()
+
+def leer_desde_db():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM meals")
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+def modificar_datos():
+    conn = sqlite3.connect(DB_NAME)
+    cur = conn.cursor()
+    id_modificar = input("👉 Ingresa el ID del plato que deseas modificar: ")
+    nuevo_nombre = input("📝 Nuevo nombre del plato: ")
+
+    cur.execute("UPDATE meals SET strMeal = ? WHERE idMeal = ?", 
+                (nuevo_nombre, id_modificar))
+    conn.commit()
+    conn.close()
+    print("✅ Plato actualizado.")
+
+def medir_tiempo_api():
+    start = time.time()
+    meals = obtener_datos_api()
+    for meal in meals:
+        pass  # Simula iteración
+    return time.time() - start
+
+def medir_tiempo_db():
+    start = time.time()
+    meals = leer_desde_db()
+    for meal in meals:
+        pass  # Simula iteración
+    return time.time() - start
+
+if __name__ == "__main__":
+    print("🍽️ Descargando y guardando datos de TheMealDB...")
+    crear_tabla()
+    meals_api = obtener_datos_api()
+    guardar_en_db(meals_api)
+
+    print("\n📂 Datos guardados en la base de datos.")
+    print("📊 Mostrando datos desde la base de datos:")
+    for meal in leer_desde_db():
+        print(f"- {meal[1]} (ID: {meal[0]})")
+
+    # Modificación
+    modificar_datos()
